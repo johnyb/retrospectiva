@@ -1,6 +1,6 @@
 # Load GIT libraries
 SCM_GIT_ENABLED = begin
-  system("#{TinyGit.git_binary} --version 1> /dev/null 2> /dev/null")
+  /^git version [\w\.]*$/.match Grit::Git.new('.').version
 end unless Object.const_defined?(:SCM_GIT_ENABLED) && Object.const_get(:SCM_GIT_ENABLED) == false
 
 # Load subversion binding libraries
