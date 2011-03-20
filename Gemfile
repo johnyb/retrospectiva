@@ -23,6 +23,9 @@ else
 end
 
 group :test do
+  gem 'cucumber-rails', "~> 0.3.2"
+  gem 'database_cleaner', "~> 0.5.0"
+  gem 'webrat',  "~> 0.7.0"
   gem "rspec", "~> 1.3.1", :require => "spec"
   gem "rspec-rails", "~> 1.3.3", :require => "spec"
   gem "shoulda"
