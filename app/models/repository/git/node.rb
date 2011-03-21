@@ -11,7 +11,7 @@ class Repository::Git::Node < Repository::Abstract::Node
   end
 
   def revision
-    root? ? repos.latest_revision : repos.repo.rev_list(selected_revision, '--', path, :max_count => 1).first 
+    revision_for_path(path)
   end
   memoize :revision
 
@@ -20,7 +20,7 @@ class Repository::Git::Node < Repository::Abstract::Node
   end
 
   def date
-    commit.author.date    
+    commit.date
   end
   
   def log
@@ -28,21 +28,22 @@ class Repository::Git::Node < Repository::Abstract::Node
   end
 
   def dir?
-    node[:type] == 'tree'
+    node[:contents].class.to_s == 'Grit::Tree'
   end
 
   def sub_nodes
     return [] unless dir?
 
-    node[:contents].map do |hash|
-      self.class.new(repos, hash[:path], selected_revision, true, hash[:type] == 'blob' ? hash : nil)
+    node[:contents].contents.map do |content|
+      blob = content.class.to_s == 'Grit::Blob' ? to_hash(content) : nil
+      self.class.new(repos, File.join(node[:path],content.name), selected_revision, true, blob)
     end.compact.sort_by {|n| [n.content_code, n.name.downcase] }
   end
   memoize :sub_nodes
 
   def content
     @content = true
-    dir? ? nil : blob.contents
+    dir? ? nil : blob.data
   end
 
   def mime_type
@@ -50,11 +51,11 @@ class Repository::Git::Node < Repository::Abstract::Node
   end
 
   def size
-    dir? ? 0 : (@content ? blob.contents.size : blob.size)
+    dir? ? 0 : node[:contents].size
   end
 
   def sub_node_count
-    dir? ? node[:contents].size : 0
+    dir? ? node[:contents].contents.size : 0
   end
 
   # Returns true if the selected node revision mathces the latest repository revision
@@ -66,8 +67,6 @@ class Repository::Git::Node < Repository::Abstract::Node
 
     def exists?
       ['blob', 'tree'].include?(node[:type]) and revision.present?
-    rescue TinyGit::GitExecuteError
-      false
     end
     
     def commit
@@ -79,14 +78,14 @@ class Repository::Git::Node < Repository::Abstract::Node
     end
     
     def node
-      if root?
-        { :sha => selected_revision, :type => 'tree', :contents => sanitize_tree(repos.repo.ls_tree(selected_revision)) }
-      elsif @blob_info
+      if @blob_info
         @blob_info
+      elsif repos.repo.commit(selected_revision)
+        tree = repos.repo.commit(selected_revision).tree
+        tree = tree / path unless root?
+        to_hash(tree)
       else
-        tree = sanitize_tree(repos.repo.ls_tree(selected_revision, '--', path, File.join(path, '*'), :t => true))
-        hash = tree.find {|i| i[:path] == path }
-        hash ? tree.delete(hash).merge(:contents => tree) : {}
+        {}
       end
     end
     memoize :node
@@ -106,6 +105,21 @@ class Repository::Git::Node < Repository::Abstract::Node
     end
   
   private
+
+    def revision_for_path(path)
+      repos.repo.git.rev_list({},[selected_revision,'--',path]).split("\n").first
+    end
+
+    def to_hash(obj)
+      case obj.class.to_s
+      when 'Grit::Tree'
+        { :sha => revision, :path => path, :type => 'tree', :contents => obj }
+      when 'Grit::Blob'
+        { :sha => revision, :path => path, :type => 'blob', :contents => obj }
+      else
+        {}
+      end
+    end
 
     def guess_mime_type
       guesses = MIME::Types.type_for(name) rescue []

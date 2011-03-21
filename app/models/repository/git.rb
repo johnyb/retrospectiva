@@ -17,7 +17,7 @@ class Repository::Git < Repository::Abstract
   end
 
   def latest_revision
-    repo.rev_parse('HEAD')
+    repo.commits.first.id
   end
   memoize :latest_revision
 
@@ -52,7 +52,7 @@ class Repository::Git < Repository::Abstract
   end
 
   def repo
-    TinyGit::Repo::new(path, logger)
+    Grit::Repo::new(path)
   end
   memoize :repo
 

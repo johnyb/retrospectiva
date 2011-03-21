@@ -145,7 +145,7 @@ class Repository::Abstract::Node
     
     def raise_invalid_node_error!
       latest = nil
-      if selected_revision < repos.latest_revision
+      if selected_revision != repos.latest_revision
         latest = self.class.new(repos, path) rescue nil
       end
       raise latest ? InvalidPathForRevision : InvalidPath      
