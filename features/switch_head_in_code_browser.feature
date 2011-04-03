@@ -7,11 +7,18 @@ Feature: change the head for git code browser
   Scenario: display multiple heads
     Given a git repository "git_test.git"
     When I list the heads
-    Then the list of heads should contain "2" entries
+    Then the list of heads should contain 2 entries
 
   Scenario: change head
     Given a git repository "git_test.git"
     When the current head is "master"
+    And "/" contains the entries
+    | Blob | .gitmodules   |
+    | Tree | retro-copied  |
+    | Tree | retrospectiva |
     And I switch to "experimental"
-    Then I should see a tree of the selected branch
-
+    Then "/" contains the entries
+    | Tree | retrospectiva |
+    And "retrospectiva" contains the entries
+    | Tree | config |
+    | Tree | public |
