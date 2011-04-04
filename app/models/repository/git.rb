@@ -23,18 +23,21 @@ class Repository::Git < Repository::Abstract
 
   def unified_diff(path, revision_a, revision_b)
     return '' unless active?
-    
-    text = repo.command :diff, revision_a, revision_b, '--', path
-    text =~ /^Binary files / ? '' : "#--- #{revision_a}\n#+++ #{revision_b}\n#{text}"
-  rescue TinyGit::GitExecuteError
+
+    text = repo.git.native('diff', {}, revision_a, revision_b, '--', [path])
+    return '' if text.empty? || text =~ /^Binary files /
+
+    "#--- #{revision_a}\n#+++ #{revision_b}\n#{text}"
+  rescue Grit::Git::CommandFailed
     ''
   end
 
   # Returns the revision history for a path starting with a given revision
   def history(path, revision = nil, limit = 100)
     return [] unless active? 
-    
-    repo.rev_list(revision || latest_revision, '--', path, :max_count => limit)
+
+    #might be slow
+    repo.log(revision || latest_revision, path).first(limit).map {|commit| commit.id }
   end
 
   def sync_changesets
@@ -43,12 +46,12 @@ class Repository::Git < Repository::Abstract
     last_changeset = changesets.find :first, :select => 'revision', :order => 'created_at DESC'
     
     revisions = if last_changeset
-      repo.rev_list("#{last_changeset.revision}..HEAD", :reverse => true)
+      repo.commits_between("#{last_changeset.revision}","HEAD")
     else
-      repo.rev_list('HEAD', :reverse => true)
+      repo.commits('HEAD',false)
     end
     
-    synchronize!(revisions)
+    synchronize!(revisions.map { |item| item.id })
   end
 
   def repo
@@ -56,32 +59,42 @@ class Repository::Git < Repository::Abstract
   end
   memoize :repo
 
-  protected 
+  protected
 
     def new_changeset(revision)
-      commit = TinyGit::Object::Commit.new(repo, revision, :find_copies_harder => true)
-            
+      commit = repo.commit(revision)
+
+      options = { :max_count => 1,
+                  :find_copies_harder => true,
+                  :pretty => "raw" }
+      output = repo.git.native(:show,options,[revision])
+      if output =~ /diff --git a/
+        output = output.sub(/.+?(diff --git a)/m, '\1')
+      else
+        output = ''
+      end
+      diffs = Grit::Diff.list_from_string(repo,output)
+
       node_data = { :added => [], :copied => [], :updated => [], :deleted => [], :moved => [] }
 
-      commit.changes.each do |change|
-        case change.type
-        when 'A'
-          node_data[:added] << change.a_path          
-        when 'D'
-          node_data[:deleted] << change.a_path
-        when 'M'
-          node_data[:updated] << change.a_path
-        when 'C'          
-          node_data[:copied] << [change.b_path, change.a_path, commit.parent.sha]
-        when 'R'
-          node_data[:moved] << [change.b_path, change.a_path, commit.parent.sha]
+      diffs.each do |diff|
+        if diff.new_file
+          node_data[:added] << diff.a_path
+        elsif diff.deleted_file
+          node_data[:deleted] << diff.a_path
+        elsif diff.renamed_file && diff.similarity_index == 100
+          node_data[:copied] << [diff.b_path, diff.a_path, commit.parents[0].id]
+        elsif diff.renamed_file
+          node_data[:moved] << [diff.b_path, diff.a_path, commit.parents[0].id]
+        else # modified
+          node_data[:updated] << diff.a_path
         end
       end
-      
+
       changeset = changesets.build :revision => revision.to_s, 
         :author => commit.committer.name, 
-        :log => commit.message, 
-        :created_at => commit.committer.date      
+        :log => commit.message.squish,
+        :created_at => commit.date
       [changeset, node_data]
     end
 
