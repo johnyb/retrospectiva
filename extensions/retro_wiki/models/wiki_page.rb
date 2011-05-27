@@ -15,7 +15,7 @@ class WikiPage < ActiveRecord::Base
   validates_presence_of :content
   validates_presence_of :author
   validates_uniqueness_of :title, :case_sensitive => false, :scope => :project_id
-  validates_association_of :project
+  validates_presence_of :project
 
   attr_accessible :content, :author
 

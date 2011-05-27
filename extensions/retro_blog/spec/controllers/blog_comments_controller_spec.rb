@@ -1,7 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 
 describe BlogCommentsController do
-  it_should_behave_like EveryProjectAreaController
+  it_should_behave_like "EveryProjectAreaController"
 
   before do
     @project = permit_access_with_current_project! :name => 'Retro', :wiki_title => 'Retro'

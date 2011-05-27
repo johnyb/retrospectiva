@@ -1,7 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 
 describe WikiController do
-  it_should_behave_like EveryProjectAreaController
+  it_should_behave_like "EveryProjectAreaController"
 
   before do
     @project = permit_access_with_current_project! :name => 'Retro', :wiki_title => 'Retro'
@@ -174,8 +174,8 @@ describe WikiController do
       controller.stub!(:cache_user_attributes!)
     end
     
-    def do_put
-      put :update, :id => 'My Title', :wiki_page => {}, :project_id => @project.to_param
+    def do_put(commit = '')
+      put :update, :id => 'My Title', :wiki_page => {}, :project_id => @project.to_param, :commit => commit
     end
 
     it 'should load the page' do
@@ -211,6 +211,17 @@ describe WikiController do
         response.should render_template(:edit)
       end      
       
+    end
+
+    describe 'when user uses the save and continue button' do
+
+      it 'should render to edit when saved' do
+        @page.should_receive(:update_attributes).with({}).and_return(true)
+        do_put( _('Save and continue'))
+        response.should be_success
+        response.should render_template(:edit)
+      end
+
     end
     
   end

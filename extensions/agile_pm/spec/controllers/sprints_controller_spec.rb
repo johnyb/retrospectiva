@@ -1,7 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + '/../spec_helper')
 
 describe SprintsController do
-  it_should_behave_like EveryProjectAreaController
+  it_should_behave_like "EveryProjectAreaController"
 
   before do
     @sprint = mock_model(Sprint, :title => 'Sprint 1')

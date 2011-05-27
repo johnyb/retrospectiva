@@ -20,7 +20,9 @@ describe "/wiki/rename.html.erb" do
   
   it "should have a form putting to update-title" do
     do_render
-    response.should have_form_puting_to(update_title_project_wiki_page_path(@project, 'Old'))
+    response.should have_tag("form[action=?]",
+                             update_title_project_wiki_page_path(@project, 'Old')
+                            )
   end
 
 end

@@ -17,8 +17,8 @@ describe WikiPage do
       @page.should belong_to(:user)
     end
   
-    it 'should validate association of project' do
-      @page.should validate_association_of(:project)
+    it 'should validate presence of project' do
+      @page.should validate_presence_of(:project)
     end
     
     it 'should validate presence of author' do
@@ -30,11 +30,13 @@ describe WikiPage do
     end
   
     it 'should validate langth of title within 2 and 80 characters' do
-      @page.should validate_length_of(:title, :within => (2..80))
+      @page.should ensure_length_of(:title).
+        is_at_least(2).
+        is_at_most(80)
     end
 
     it 'should validate uniqueness of title per project' do
-      @page.should validate_uniqueness_of(:title)
+      @page.should validate_uniqueness_of(:title).scoped_to(:author, :content, :project)
     end
   
     it 'should validate correct format of title' do
