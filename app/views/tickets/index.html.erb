@@ -52,16 +52,16 @@
         <td colspan="<%= property_types.any? ? 4 : 3 %>" class="righted"><%= _('Search') %>: <%= search_field_tag %></td>
       </tr>
       <tr>
-        <th><%= _('ID') %></th>
-        <th><%= _('Status') %></th>
-        <th><%= _('Summary') %></th>
-        <th><%= _('Assigned To') %></th>
-        <th><%= _('Priority') %></th>
-        <th><%= _('Milestone') %></th>
+        <th><%= sortable_column _('ID'), :column => "tickets.id" %></th>
+        <th><%= sortable_column _('Status'), :column => "tickets.status_id" %></th>
+        <th><%= sortable_column _('Summary'), :column => "tickets.summary" %></th>
+        <th><%= sortable_column _('Assigned To'), :column => "tickets.assigned_user_id" %></th>
+        <th><%= sortable_column _('Priority'), :column => "tickets.priority_id" %></th>
+        <th><%= sortable_column _('Milestone'), :column => "tickets.milestone_id" %></th>
         <% if property_types.any? -%>
-          <th><%= _('Properties') %></th>
+          <th><%= sortable_column _('Properties'), :column => "ticket_properties.name" %></th>
         <% end -%>
-        <th><%= _('Last Update') %></th>
+        <th><%= sortable_column _('Last Update'), :column => "tickets.updated_at" %></th>
       </tr>
     </thead>
   

@@ -3,6 +3,8 @@
 # Please read LICENSE document for more information.
 #++
 class TicketsController < ProjectAreaController
+  handles_sortable_columns
+  
   keep_params! :only => [:index], :exclude => [:project_id]
 
   menu_item :tickets, :except => [:new, :create] do |i|
@@ -47,7 +49,6 @@ class TicketsController < ProjectAreaController
   
   def index    
     @tickets = paginate_tickets(request.format.rss? ? 10 : params[:per_page], request.format.rss? ? 10 : nil)    
-    
     respond_to do |format|
       format.html
       format.rss  { render_rss(Ticket) }
@@ -253,6 +254,7 @@ class TicketsController < ProjectAreaController
   private
 
     def paginate_tickets(per_page, total_entries = nil)
+      order = sortable_column_order
       Project.current.tickets.paginate(
         :page => params[:page],
         :per_page => per_page,
@@ -260,7 +262,8 @@ class TicketsController < ProjectAreaController
         :conditions => conditions_for_paginate,
         :include => Ticket.default_includes,
         :joins => ( request.format.rss? ? nil : @filters.joins ),
-        :order => [ticket_order, 'tickets.updated_at DESC', 'ticket_changes.created_at'].compact.join(', '))
+        :order => [order, 'tickets.updated_at DESC', 'ticket_changes.created_at'].compact.join(', '))
+	        
     end
 
     def conditions_for_paginate
